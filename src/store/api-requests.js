@@ -28,13 +28,19 @@ const getData = async url => {
   const response = await client.get(url);
   return response;
 };
+const getPaginateData = async (url, params) => {
+  console.log('url: ', url);
+  const response = await client.get(url, {params});
+  return response;
+};
 const API_REQUESTS = {
   postData,
   postFormData,
   getData,
   putData,
   putFormData,
-  deleteData
+  deleteData,
+  getPaginateData
 };
 
 export default API_REQUESTS;

@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Dimensions,
@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   StatusBar,
 } from 'react-native';
-import {connect} from 'react-redux';
+import { connect } from 'react-redux';
 import PrimaryShare from '../../../components/modals/primary-share';
 import ContentComments from '../../../components/molecules/collapseable-view/content-comments';
 const windowWidth = Dimensions.get('window').width;
@@ -15,25 +15,26 @@ const windowHeight = Dimensions.get('window').height;
 import Spinner from 'react-native-loading-spinner-overlay';
 import ReelsComponent from '../../../components/videos/home-components/ReelsComponent';
 import APP_API from '../../../store/api-calls';
-import {useNavigation, useIsFocused} from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import messaging from '@react-native-firebase/messaging';
 import Share from 'react-native-share';
-import {URLS} from '../../../store/api-urls';
+import { URLS } from '../../../store/api-urls';
 import convertToProxyURL from 'react-native-video-cache';
-import {mvs} from '../../../services/metrices';
+import { mvs } from '../../../services/metrices';
 import colors from '../../../services/colors';
 import Regular from '../../../typo-graphy/regular-text';
-import {Drop} from '../../../assets/svgs';
+import { Drop } from '../../../assets/svgs';
 import PrimaryDropdown from '../../../components/modals/primary-dropdown';
-import notifee, {AndroidImportance} from '@notifee/react-native';
+import notifee, { AndroidImportance } from '@notifee/react-native';
 import SERVICES from '../../../services/common-services';
-import {shuffle} from 'lodash';
+import { shuffle } from 'lodash';
 import HomeVideos from '../../../components/videos/home-videos/home-videos';
-const HomeReels = ({refresh_screen = false, ...props}) => {
+const HomeReels = ({ refresh_screen = false, ...props }) => {
   const {
     user_info,
     getVideos,
     videos,
+    home_content,
     get_comments,
     getcomments,
     send,
@@ -55,14 +56,16 @@ const HomeReels = ({refresh_screen = false, ...props}) => {
   const [isRefresh, setRefresh] = useState(false);
   const [spinner, setSpinner] = useState(false);
   const [url, setUrl] = useState();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [homeVideos, setHomeVideos] = useState([]);
   const [type, setType] = useState(SERVICES.translate('home'));
   const [aState, setAppState] = useState(AppState.currentState);
   const [show, setShow] = React.useState(false);
   const ViewersType = [
-    {id: 1, type: SERVICES.translate('home')},
-    {id: 2, type: SERVICES.translate('following')},
-    {id: 3, type: SERVICES.translate('superfans')},
+    { id: 1, type: SERVICES.translate('home') },
+    { id: 2, type: SERVICES.translate('following') },
+    { id: 3, type: SERVICES.translate('superfans') },
   ];
   useEffect(() => {
     get_profile(user_info?.id);
@@ -116,23 +119,50 @@ const HomeReels = ({refresh_screen = false, ...props}) => {
         action == 'FACEBOOK'
           ? Share.Social.FACEBOOK
           : action == 'WHATSAPP'
-          ? Share.Social.WHATSAPP
-          : action == 'MESSENGER'
-          ? Share.Social.MESSENGER
-          : action == 'TWITTER'
-          ? Share.Social.TWITTER
-          : Share.Social.INSTAGRAM,
+            ? Share.Social.WHATSAPP
+            : action == 'MESSENGER'
+              ? Share.Social.MESSENGER
+              : action == 'TWITTER'
+                ? Share.Social.TWITTER
+                : Share.Social.INSTAGRAM,
     });
   };
-  const getHomeVideos = async () => {
-    setSpinner(true);
-    var res = await getVideos();
-    setSpinner(false);
-    if (res?.data?.data) {
-      var shuffledList = shuffle(res?.data?.data);
-      setHomeVideos(shuffledList);
+  // const getHomeVideos = async () => {
+  //   setSpinner(true);
+  //   var res = await getVideos({ page: 1, pageSize: 10 });
+  //   setSpinner(false);
+  //   if (res?.data?.data) {
+  //     var shuffledList = shuffle(res?.data?.data);
+  //     setHomeVideos(shuffledList);
+  //   }
+  // };
+  const loadMoreVideos = () => {
+    if (currentPage < totalPages) {
+      const nextPage = currentPage + 1;
+      getHomeVideos(nextPage);
     }
   };
+
+  const getHomeVideos = async (page = 1) => {
+    setSpinner(true);
+    var res = await getVideos({ page, pageSize: 6 });
+    setSpinner(false);
+    if (res?.data?.data) {
+      var shuffledList = shuffle(res?.data?.data?.results);
+      if (page == 1) {
+        setHomeVideos(shuffledList);
+      } else {
+        setHomeVideos(homeVideos.concat(shuffledList));
+      }
+      setCurrentPage(page);
+      setTotalPages(
+        res?.data?.data?.totalRecords /
+        res?.data?.data?.itemsPerPage
+      );
+
+    }
+  };
+
   const get_fcm = async () => {
     const payLoad = {
       userId: user_info?.id,
@@ -164,7 +194,7 @@ const HomeReels = ({refresh_screen = false, ...props}) => {
   };
   const likeContent = async (id, isLikeByMe) => {
     console.log('-------' + isLikeByMe);
-    var payload = {userId: user_info?.id, contentId: id};
+    var payload = { userId: user_info?.id, contentId: id };
     if (isLikeByMe) {
       unlike_content(payload)
         .then(res => {
@@ -208,7 +238,7 @@ const HomeReels = ({refresh_screen = false, ...props}) => {
       .catch(err => console.log(err));
   };
   const saveMedia = async (id, isSavedByMe) => {
-    var payload = {userId: user_info?.id, contentId: id};
+    var payload = { userId: user_info?.id, contentId: id };
     console.log('------------' + id + '-------' + isSavedByMe);
     if (isSavedByMe) {
       un_save(payload)
@@ -231,7 +261,7 @@ const HomeReels = ({refresh_screen = false, ...props}) => {
   // console.log("===="+JSON.stringify(videos))
   const reportContent = () => {
     setShareModal(false);
-    navigation.navigate('ReportContent', {isMe: false, id: contentId});
+    navigation.navigate('ReportContent', { isMe: false, id: contentId });
   };
 
   const sendContent = userId => {
@@ -262,7 +292,7 @@ const HomeReels = ({refresh_screen = false, ...props}) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.ddown} onPress={() => setShow(true)}>
-          <Regular label={type} style={{marginRight: mvs(10)}} />
+          <Regular label={type} style={{ marginRight: mvs(10) }} />
           <Drop />
         </TouchableOpacity>
       </View>
@@ -270,6 +300,8 @@ const HomeReels = ({refresh_screen = false, ...props}) => {
         <HomeVideos
           user_info={user_info}
           videos={homeVideos}
+          onRefresh={getHomeVideos}
+          loadMoreVideos={loadMoreVideos}
           onCommentPress={id => get_video_comments(id)}
           onLikePress={(id, isLikeByMe) => likeContent(id, isLikeByMe)}
           onSavePress={(id, isSavedByMe) => saveMedia(id, isSavedByMe)}
@@ -301,7 +333,7 @@ const HomeReels = ({refresh_screen = false, ...props}) => {
       <Spinner
         visible={spinner}
         textContent={SERVICES.translate('loading')}
-        textStyle={{color: '#FFF'}}
+        textStyle={{ color: '#FFF' }}
       />
       <PrimaryDropdown
         title={SERVICES.translate('selectOneOption')}
@@ -319,12 +351,14 @@ const HomeReels = ({refresh_screen = false, ...props}) => {
 };
 const mapStateToProps = store => ({
   user_info: store.state.user_info,
-  videos: store.state.home_content,
+  videos: store.state.home_content?.items,
+  home_content: store.state.home_content?.items,
+  totalRecords: store.state.home_content?.totalRecords,
   getcomments: store.state.getcomments,
   chat_list: store.state.chat_list,
 });
 const mapDispatchToProps = {
-  getVideos: () => APP_API.home_content(),
+  getVideos: (params) => APP_API.home_content(params),
   get_comments: payload => APP_API.get_comments(payload),
   comment: payload => APP_API.comment(payload),
   like_content: payload => APP_API.like_content(payload),

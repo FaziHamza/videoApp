@@ -1,5 +1,5 @@
 import React, {useRef, useState, useCallback, useEffect} from 'react';
-import {FlatList} from 'react-native';
+import {Alert, FlatList} from 'react-native';
 import GestureRecognizer from 'react-native-swipe-gestures';
 import {useNavigation} from '@react-navigation/native';
 import Post from './post';
@@ -7,6 +7,8 @@ import {mvs} from '../../../services/metrices';
 import {content_types} from '../../../store/constant-data';
 const HomeVideos = ({
   videos,
+  onRefresh,
+  loadMoreVideos = () => {},
   onSharePress = () => {},
   onCommentPress = () => {},
   onLikePress = () => {},
@@ -42,7 +44,6 @@ const HomeVideos = ({
     velocityThreshold: 1.0,
     directionalOffsetThreshold: 40,
   };
-
   const renderItem = useCallback(
     ({item, index}) => (
       <GestureRecognizer
@@ -62,7 +63,7 @@ const HomeVideos = ({
           onCommentPress={id => onCommentPress(id)}
           onLikePress={(id, isLikeByMe) => onLikePress(id, isLikeByMe)}
           onSavePress={(id, isSavedByMe) => onSavePress(id, isSavedByMe)}
-          onSharePress={(id, path) => onSharePress(id, path)}
+          // onSharePress={(id, path) => onSharePress(id, path)}
           onUserPress={() => viewProfile(item)}
           onSubscribePress={() => subscribe(item)}
           isFocus={isFocus}
@@ -107,6 +108,10 @@ const HomeVideos = ({
       onViewableItemsChanged={onViewCallBack}
       initialNumToRender={videos?.length}
       viewabilityConfig={viewConfigRef.current}
+      onEndReached={loadMoreVideos}
+      onEndReachedThreshold={0.5}
+      onRefresh={onRefresh}
+      refreshing={false}
     />
   );
 };
